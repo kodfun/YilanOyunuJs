@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yılan Oyunu</title>
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            background-color: darkgray;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            border: 20px solid gray;
+            background-color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas" width="600" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        let sutun = 10, satir = 10;
+        let gen, yuk;
+        let yilan = [];
+        let yon;
+        let skor;
+        let timerId;
+        let yonVerildi;
+
+        function oyunuHazirla() {
+            timerId = null;
+            yonVerildi = false;
+            sahneyiTemizle();
+            skor = 0;
+            yon = { x: 1, y: 0 };
+            yilaniHazirla();
+            yemiHazirla();
+            gen = canvas.width / sutun;
+            yuk = canvas.height / satir;
+            yilaniCiz();
+            yemiCiz();
+            skoruCiz();
+        }
+
+        function yilaniHazirla() {
+            yilan = [{ x: sutun / 2, y: satir / 2 }];
+            yilan.push({ x: yilan[0].x - 1, y: yilan[0].y }); yilan.push({ x: yilan[0].x - 2, y: yilan[0].y });
+        }
+
+        function yemiHazirla() {
+            do {
+                yem = { x: rastgele(sutun), y: rastgele(satir) };
+            } while (yilan.some(b => b.x == yem.x && b.y == yem.y));
+        }
+
+        function rastgele(maks) {
+            return Math.floor(Math.random() * maks);
+        }
+
+        function yilaniCiz() {
+            hucreCiz(yilan[0], "lime");
+            // saydamlık: 0.8 -> 0.2
+            let azaltma = 0.6 / (yilan.length - 1);
+
+            for (let i = 1; i < yilan.length; i++) {
+                const bogum = yilan[i];
+                hucreCiz(bogum, `rgba(0, 255, 0, ${.8 - i * azaltma}`);
+            }
+        }
+
+        function yemiCiz() {
+            hucreCiz(yem, "red");
+        }
+
+        function hucreCiz(konum, renk) {
+            ctx.fillStyle = renk;
+            ctx.fillRect(konum.x * gen, konum.y * gen, gen, yuk);
+            ctx.beginPath();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "black";
+            ctx.rect(konum.x * gen, konum.y * gen, gen, yuk);
+            ctx.stroke();
+        }
+
+        function skoruCiz() {
+            ctx.font = "bold 30px 'courier new'";
+            ctx.fillStyle = "orange";
+            ctx.fillText("skor " + formatSkor(skor), canvas.width - 160, 40);
+        }
+
+        function formatSkor(sayi) {
+            if (sayi < 10) return "00" + sayi;
+            else if (sayi < 100) return "0" + sayi;
+            else return sayi;
+        }
+
+        function hareket() {
+            let yeniBas = {
+                x: yilan[0].x + yon.x,
+                y: yilan[0].y + yon.y,
+            };
+
+            // oyunun sonlandırılması
+            if (yilanKendineCarptiMi(yeniBas) || yeniBas.x < 0 || yeniBas.y < 0 || yeniBas.x >= sutun || yeniBas.y >= satir) {
+                clearInterval(timerId);
+                alert("Oyun Bitti");
+                oyunuHazirla();
+                return;
+            }
+
+            yilan.unshift(yeniBas); // yılan başını ilerlet
+
+            if (yeniBas.x == yem.x && yeniBas.y == yem.y) {
+                skor++;
+                yemiHazirla();
+            }
+            else {
+                yilan.pop(); // yılanın kuyruğunu kes
+            }
+
+            sahneyiTemizle();
+            yilaniCiz();
+            yemiCiz();
+            skoruCiz();
+            yonVerildi = false;
+        }
+
+        function yilanKendineCarptiMi(yeniBas) {
+            return yilan
+                .slice(0, yilan.length - 1)
+                .some(b => b.x == yeniBas.x && b.y == yeniBas.y);
+        }
+
+        function sahneyiTemizle() {
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function tusaBasildi(e) {
+            if (yonVerildi) return;
+
+            let yeniYon;
+            switch (e.which) {
+                case 37:
+                    yeniYon = { x: -1, y: 0 };
+                    break;
+                case 38:
+                    yeniYon = { x: 0, y: -1 };
+                    break;
+                case 39:
+                    yeniYon = { x: 1, y: 0 };
+                    break;
+                case 40:
+                    yeniYon = { x: 0, y: 1 };
+                    break;
+                default:
+                    return;
+            }
+
+            if (!timerId)
+                timerId = setInterval(hareket, 500);
+
+            // aynı yöne sapılmak isteniyor
+            if (yeniYon.x && yon.x || yeniYon.y && yon.y)
+                return;
+
+            yon = yeniYon;
+            yonVerildi = true;
+        }
+
+        oyunuHazirla();
+
+        document.body.onkeydown = tusaBasildi;
+    </script>
+</body>
+
+</html>
